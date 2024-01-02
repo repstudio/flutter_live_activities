@@ -7,13 +7,11 @@ class FlutterAlertConfig {
   let _title:String
   let _body:String
   let _sound:String?
-//  let _sound:AlertConfiguration.AlertSound
 
   init(title:String, body:String, sound:String?) {
     _title = title;
     _body = body;
       _sound = sound;
-//    _sound = sound == nil ? .default : AlertConfiguration.AlertSound(rawValue: sound!);
   }
 
   func getAlertConfig() -> AlertConfiguration {
@@ -133,7 +131,6 @@ public class SwiftLiveActivitiesPlugin: NSObject, FlutterPlugin, FlutterStreamHa
               
               let alertConfig = (alertTitle == nil || alertBody == nil) ? nil : FlutterAlertConfig(title: alertTitle!, body: alertBody!, sound: alertSound);
         
-//              let alertTitle = args?[
             updateActivity(activityId: activityId, data: data, alertConfig: alertConfig, result: result)
           } else {
             result(FlutterError(code: "WRONG_ARGS", message: "argument are not valid, check if 'activityId', 'data' are valid", details: nil))
@@ -196,13 +193,16 @@ public class SwiftLiveActivitiesPlugin: NSObject, FlutterPlugin, FlutterStreamHa
       }
     }
 
-    for item in data {
-      sharedDefault!.set(item.value, forKey: item.key)
-    }
     
     let liveDeliveryAttributes = LiveActivitiesAppAttributes()
     let initialContentState = LiveActivitiesAppAttributes.LiveDeliveryData(appGroupId: appGroupId!)
     var deliveryActivity: Activity<LiveActivitiesAppAttributes>?
+    let prefix = liveDeliveryAttributes.id
+
+    for item in data {
+        sharedDefault!.set(item.value, forKey: "\(prefix)_\(item.key)")
+    }
+
     if #available(iOS 16.2, *){
       let activityContent = ActivityContent(
         state: initialContentState,
@@ -230,7 +230,7 @@ public class SwiftLiveActivitiesPlugin: NSObject, FlutterPlugin, FlutterStreamHa
       if removeWhenAppIsKilled {
         appLifecycleLifeActiviyIds.append(deliveryActivity!.id)
       }
-//       monitorLiveActivity(deliveryActivity!)
+//       monitorLiveActivity(deliveryActivity!) /// this causes the app to crash on hard close; but commenting it out probably means push notification updates won't work
       result(deliveryActivity!.id)
     }
   }
@@ -240,11 +240,13 @@ public class SwiftLiveActivitiesPlugin: NSObject, FlutterPlugin, FlutterStreamHa
     Task {
       for activity in Activity<LiveActivitiesAppAttributes>.activities {
         if activityId == activity.id {
+          let prefix = activity.attributes.id
+
           for item in data {
             if (item.value != nil && !(item.value is NSNull)) {
-              sharedDefault!.set(item.value, forKey: item.key)
+              sharedDefault!.set(item.value, forKey: "\(prefix)_\(item.key)")
             } else {
-              sharedDefault!.removeObject(forKey: item.key)
+              sharedDefault!.removeObject(forKey: "\(prefix)_\(item.key)")
             }
           }
           
